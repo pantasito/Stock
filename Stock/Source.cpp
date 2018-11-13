@@ -4,10 +4,10 @@
 #include <vector>
 using namespace std;
 
-const char* missed_orders_list = "C:\\VSP\\AndrewTasks\\LikeAtWork\\reserve.bin";
-const char* current = "C:\\VSP\\AndrewTasks\\LikeAtWork\\out.bin";
+const char* missed_orders_file_path = "D:\\C++ projects\\Andre\\SergeyStock\\Stock\\Debug\\reserve.bin";
+const char* orders_file_path = "D:\\C++ projects\\Andre\\SergeyStock\\Stock\\Debug\\out.bin";
 /*
-enum class TradeType
+enum class OrderType
 {
   AllCompleted = 0,
   PartCompleted = 1,
@@ -15,9 +15,10 @@ enum class TradeType
 };
 */
 
-class Trade
+// 
+class Order
 {
-  uint32_t  _seq_id;
+  uint64_t  _seq_id; // SeqId()
   uint64_t  _product_id;
   uint64_t  _time;
   char      _type;
@@ -25,59 +26,82 @@ class Trade
   uint64_t  _client_id;
 
 public:
-  Trade() {
-    ifstream reserve(current, ios::binary|ios::in);
-    reserve.read((char*)this, sizeof Trade);
+  Order(ifstream& ifs) {
+    ifs.read((char*)this, sizeof(Order));
   }
-
-  Trade(uint32_t  seq_id, uint64_t  product_id, uint64_t time, char type, uint32_t  count, uint64_t  client_id) {
-    _seq_id     = seq_id;
-    _product_id = product_id;
-    _time       = time;
-    _type       = type;
-    _count      = count;
-    _client_id  = client_id;
-  }
-
+  
   void print() {
     cout <<_seq_id << " " << _product_id << " " << _time << " " << (int)_type << " " << _count << " " << _client_id << endl;
   }
 };
 
-vector <Trade> GetMissedOrders() {
-  vector <Trade> res;
 
-  uint32_t  seq_id = 0;
-  uint64_t  product_id = 0;
-  uint64_t  time = 0;
-  char      type = 0;
-  uint32_t  count = 0;
-  uint64_t  client_id = 0;
+class Reader
+{
 
-  ifstream orders(missed_orders_list, ios::binary);
-  
-  orders.read((char*)&seq_id,     sizeof (seq_id));
-  orders.read((char*)&product_id, sizeof (product_id));
-  orders.read((char*)&time,       sizeof (time));
-  orders.read((char*)&type,       sizeof (type));
-  orders.read((char*)&count,      sizeof (count));
-  orders.read((char*)&client_id,  sizeof (client_id));
-  orders.close();
+public:
+  Reader(string a, string b) 
+  {
+    // —читать файл б
+    // —обрать из него вектор
+    // отсортировать
 
-  Trade n(seq_id, product_id, time, type, count, client_id);
-  
-  res.push_back(n);
-  
-  return res;           
+    // ќ“крыть поток
+  }
+
+  Order* GetOrder() {} 
+};
+
+
+void checre()
+{
+  Reader reader("dd", "ff");
+  int expected_seq_id = 1;
+  do
+  {
+    auto order = reader.GetOrder();
+    if (order == nullptr)
+    {
+      break;
+    }
+
+    if (expected_seq_id != order->_seq_id)
+    {
+      throw "BEDA";
+    }
+
+    ++expected_seq_id;
+
+  } while ()
+};
+
+vector<Order> GetMissedOrders() {
+  vector<Order> result_orders;
+
+  ifstream missed_orders_ifs(missed_orders_list, ios::binary);
+
+  while (missed_orders_ifs) {
+  //  Order n;
+   // orders.read((char*)&n, sizeof(n));
+    //Order n(orders);
+    //res.push_back(n);
+    result_orders.emplace_back(missed_orders_ifs); // —оздает объект пр€мо внутри вектора, на вход она принимает аргументы конструктора
+  }
+
+  result_orders.close();
+  return result_orders;
 }                       
 
-int main() {
-  
-  vector <Trade> missed_orders = GetMissedOrders();
+int main() {  
+  checre();
+  vector<Order> missed_orders = GetMissedOrders();
+
+  /*
   for (auto item : missed_orders) {
     item.print();
   }
-  
+  */
+
 
 
   system("pause");
