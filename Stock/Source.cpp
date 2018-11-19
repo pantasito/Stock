@@ -1,32 +1,19 @@
 #include <iostream>
-#include <stdlib.h>
 #include <fstream>
-#include <vector>
-#include "Reader.h"
-#include "Order.h"
-using namespace std;
 
-/*
-enum class OrderType
-{
-  AllCompleted = 0,
-  PartCompleted = 1,
-  Rejected = 2
-};
-*/
+#include "Reader/Reader.h"
+#include "Object/Order.h"
+
+using namespace std;
 
 int main() {  
 //  checre();
-  Reader r;
-  Order* tmp = r.GetOrder();
-  if (tmp == nullptr) {
-    return 0;
-  }
+  Reader r("C:\\VSP\\AndrewTasks\\Stock\\Stock\\Stock\\reserve.bin", 
+           "C:\\VSP\\AndrewTasks\\Stock\\Stock\\Stock\\out.bin");
 
-  do {
-    tmp->print();
-    tmp = r.GetOrder();
-  } while (tmp != nullptr);
+  r.print();
+
+
 
   system("pause");
 }

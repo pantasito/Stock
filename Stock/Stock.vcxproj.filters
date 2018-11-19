@@ -20,10 +20,10 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Order.h">
+    <ClInclude Include="Reader\Reader.h">
       <Filter>Файлы заголовков</Filter>
     </ClInclude>
-    <ClInclude Include="Reader.h">
+    <ClInclude Include="Object\Order.h">
       <Filter>Файлы заголовков</Filter>
     </ClInclude>
   </ItemGroup>

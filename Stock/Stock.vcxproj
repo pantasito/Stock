@@ -118,8 +118,8 @@
     <ClCompile Include="Source.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Order.h" />
-    <ClInclude Include="Reader.h" />
+    <ClInclude Include="Object\Order.h" />
+    <ClInclude Include="Reader\Reader.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
