@@ -18,7 +18,8 @@ namespace Stock
       std::map<uint64_t, std::unique_ptr<Object::Order>> _missed_orders;
       std::map<uint64_t, std::unique_ptr<Object::Order>>::iterator _cur_missed_order_to_give_it;
 
-      // seq_id ордера, который был прочитан, но еще не должен быть обработан
+      int read_but_not_processed_seq_id;
+      //seq_id ордера, который был прочитан, но еще не должен быть обработан
       // Если он 0, то у нас нет ордера в ожидании
       uint64_t _waiting_seq_id = 0;
       std::unique_ptr<Object::Order> _waiting_order;
@@ -52,7 +53,6 @@ namespace Stock
           missed_orders_ifs.read((char*)&count, sizeof(count));
           missed_orders_ifs.read((char*)&client_id, sizeof(client_id));
 
-          //_missed_orders[seq_id] = make_unique<Order>(product_id, time, type, count, client_id);
           _missed_orders.emplace(seq_id, std::make_unique<Object::Order>(product_id, time, type, count, client_id));
         }
 
@@ -85,10 +85,53 @@ namespace Stock
         }
       }
 
-      // "Выдадть ордер из резерва"
-      //        Если кончились ордера в резерве, то сигнализируем ошибку (std::logic_error)
-      //        Если _expected_seq_id != что в итераторе (std::logic_error)
-      //        Возвращаем указатель 
+      std::unique_ptr<Object::Order>& ToGiveOrderFromMissedOrders()
+      {
+        // "Выдадть ордер из резерва"
+        //        Если кончились ордера в резерве, то сигнализируем ошибку (std::logic_error)
+        //        Если _expected_seq_id != что в итераторе (std::logic_error)
+        //        Возвращаем указатель 
+
+        if (_cur_missed_order_to_give_it == _missed_orders.end()) throw /*std::logic_error*/;
+        if ((*_cur_missed_order_to_give_it).first != _expected_seq_id) throw /*std::logic_error*/;
+        
+        std::map<uint64_t, std::unique_ptr<Object::Order>>::iterator result = _cur_missed_order_to_give_it;
+        
+        ++_cur_missed_order_to_give_it;
+        ++_expected_seq_id;
+
+        return (*result).second;
+      }
+
+      std::unique_ptr<Object::Order>& GetNextOrderFromOrdersIfs() {
+        uint64_t  seq_id;
+        uint64_t  product_id;
+        uint64_t  time;
+        Object::OrderType type;
+        uint32_t  count;
+        uint64_t  client_id;
+
+        if (_orders_ifs) {
+          _orders_ifs.read((char*)&seq_id, sizeof(seq_id));
+          if (seq_id == 0) {
+            //как обозначить, что вектор закончился?
+
+          }
+        }
+      
+          _orders_ifs.read((char*)&product_id, sizeof(product_id));
+          _orders_ifs.read((char*)&time, sizeof(time));
+          _orders_ifs.read((char*)&type, sizeof(type));
+          _orders_ifs.read((char*)&count, sizeof(count));
+          _orders_ifs.read((char*)&client_id, sizeof(client_id));
+
+          return std::make_unique<Object::Order>(product_id, time, type, count, client_id);
+        }
+
+
+      }
+
+
 
       /* Использовать эту функцию, чтобы возвращать ордера в GetOrder. 
          Например  return std::move(ToGiveOrder(order));
@@ -101,7 +144,8 @@ namespace Stock
       */
 
       std::unique_ptr<Object::Order> GetOrder() {
-        // Если кончился основнйо поток, то "Выдадть ордер из резерва"
+        // Если кончился основной поток, то "Выдадть ордер из резерва"
+       
 
         // Если _waiting_seq_id != 0
         //    Если _waiting_seq_id > _expected_seq_id
