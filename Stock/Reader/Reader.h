@@ -15,8 +15,66 @@ namespace Stock
   {
     class BinaryReader
     {
-      std::map<uint64_t, std::unique_ptr<Object::Order>> _missed_orders;
+      class MissedOrders 
+      {
+      std::map<uint64_t, std::unique_ptr<Object::Order>> _missed_orders_map;
       std::map<uint64_t, std::unique_ptr<Object::Order>>::iterator _cur_missed_order_to_give_it;
+      
+      public:
+        MissedOrders(const std::string& missed_orders_file_path) {
+          std::ifstream missed_orders_ifs(missed_orders_file_path);
+
+          uint64_t  seq_id;
+          uint64_t  product_id;
+          uint64_t  time;
+          Object::OrderType type;
+          uint32_t  count;
+          uint64_t  client_id;
+
+          while (missed_orders_ifs) {
+            missed_orders_ifs.read((char*)&seq_id, sizeof(seq_id));
+            if (seq_id == 0) {
+              break;
+            }
+
+            missed_orders_ifs.read((char*)&product_id, sizeof(product_id));
+            missed_orders_ifs.read((char*)&time, sizeof(time));
+            missed_orders_ifs.read((char*)&type, sizeof(type));
+            missed_orders_ifs.read((char*)&count, sizeof(count));
+            missed_orders_ifs.read((char*)&client_id, sizeof(client_id));
+
+            _missed_orders_map.emplace(seq_id, std::make_unique<Object::Order>(product_id, time, type, count, client_id));
+          }
+          missed_orders_ifs.close();
+
+          if (_missed_orders_map.empty()) {
+            _cur_missed_order_to_give_it = _missed_orders_map.end();
+          }
+          else {
+            _cur_missed_order_to_give_it = _missed_orders_map.begin();
+          } 
+        }
+
+        std::unique_ptr<Object::Order> GetOrderFromMissed() {
+          // "Выдадть ордер из резерва"
+          //        Если кончились ордера в резерве, то сигнализируем ошибку (std::logic_error)
+          //        Если _expected_seq_id != что в итераторе (std::logic_error)
+          //        Возвращаем указатель 
+
+          if (_cur_missed_order_to_give_it == _missed_orders_map.end()) {
+            throw std::logic_error("Missed orders is empty");
+          }
+
+          auto result = _cur_missed_order_to_give_it;
+
+          ++_cur_missed_order_to_give_it;
+         
+          return std::move(result->second);
+        }
+      };
+
+      MissedOrders _missed_orders;
+
 
       // seq_id ордера, который был прочитан, но еще не должен быть выдан
       // Если он 0, то у нас нет ордера в ожидании
@@ -27,84 +85,23 @@ namespace Stock
       int _expected_seq_id = 0;
 
       std::ifstream _orders_ifs;
-
-
-      void MissedOrdersPreparation(const std::string& missed_orders_file_path) {
-        std::ifstream missed_orders_ifs(missed_orders_file_path);
-
-        uint64_t  seq_id;
-        uint64_t  product_id;
-        uint64_t  time;
-        Object::OrderType type;
-        uint32_t  count;
-        uint64_t  client_id;
-
-        while (missed_orders_ifs) {
-          missed_orders_ifs.read((char*)&seq_id, sizeof(seq_id));
-          if (seq_id == 0) {
-            break;
-          }
-
-          missed_orders_ifs.read((char*)&product_id, sizeof(product_id));
-          missed_orders_ifs.read((char*)&time, sizeof(time));
-          missed_orders_ifs.read((char*)&type, sizeof(type));
-          missed_orders_ifs.read((char*)&count, sizeof(count));
-          missed_orders_ifs.read((char*)&client_id, sizeof(client_id));
-
-          _missed_orders.emplace(seq_id, std::make_unique<Object::Order>(product_id, time, type, count, client_id));
-        }
-
-        missed_orders_ifs.close();
-
-        if (_missed_orders.empty()) {
-          _cur_missed_order_to_give_it = _missed_orders.end();
-        }
-        else {
-          _cur_missed_order_to_give_it = _missed_orders.begin();
-        }
-      }
-
+      
       BinaryReader(const BinaryReader&) = delete;
       void operator=(const BinaryReader &) = delete;
 
     public:
       BinaryReader(const std::string& orders_file_path, const std::string& missed_orders_file_path)
-        : _orders_ifs(orders_file_path)
-      {
-        MissedOrdersPreparation(missed_orders_file_path);
+        : _missed_orders(missed_orders_file_path), _orders_ifs(orders_file_path)
+      {  
+        std::unique_ptr<Object::Order> _waiting_order = GetOrderFromIfs();
+        // Размышляю над проблемой следующей - так как методы возвращают только Oder и не возвращают seq_id ордера
+        // как мне проводить проверку соответствия _expected_seq_id и _seq_id в методе Get_Order?
+        // и заполняб поле _waiting_seq_id.
+        // Пока кажется, что никак и нужно или возвращать пару или проводить
+        // проверку в методах GetOrderFromIfs() и GetOrderFromMissed()
       }
 
-      void print() {
-        for (const auto& order : _missed_orders) {
-          std::cout << order.first << " ";
-          order.second->print();
-        }
-      }
-
-      std::unique_ptr<Object::Order> GetOrderFromMissed()
-      {
-        // "Выдадть ордер из резерва"
-        //        Если кончились ордера в резерве, то сигнализируем ошибку (std::logic_error)
-        //        Если _expected_seq_id != что в итераторе (std::logic_error)
-        //        Возвращаем указатель 
-
-        if (_cur_missed_order_to_give_it == _missed_orders.end()) {
-          throw std::logic_error("Missed orders is empty");
-        }
-
-        if (_cur_missed_order_to_give_it->first != _expected_seq_id) {
-          throw std::logic_error("Expected seq id != cur missed seq id");
-        }
-        
-        auto result = _cur_missed_order_to_give_it;
-        
-        ++_cur_missed_order_to_give_it;
-        ++_expected_seq_id;
-
-        return std::move(result->second);
-      }
-
-      std::unique_ptr<Object::Order> GetOrderFromOrdersIfs() {
+      std::unique_ptr<Object::Order> GetOrderFromIfs() {
         // Читает из основного потока seq. Если он != 0, то читает данные о ордере, создает и возвращает его
         // А если seq == 0, то возвращает nullptr
                 
@@ -134,7 +131,6 @@ namespace Stock
         return std::make_unique<Object::Order>(product_id, time, type, count, client_id);
       }
 
-
       /* Использовать эту функцию, чтобы возвращать ордера в GetOrder. 
          Например  return std::move(ToGiveOrder(order));
 
@@ -147,6 +143,22 @@ namespace Stock
 
       std::unique_ptr<Object::Order> GetOrder() {
         // Если кончился основной поток, то "Выдадть ордер из резерва"
+        if (_waiting_order == nullptr) {
+          auto order = _missed_orders.GetOrderFromMissed();
+          if (order == nullptr) {
+            return nullptr;
+          }
+          else {
+            if (//_expected_seq_id != _cur_seq_id) {
+              throw std::logic_error("_orders_ifs now is empty, _missed_orders_ifs returned wrong data");
+            }
+            else {
+              ++_expected_seq_id;
+              return order;
+            }
+          }
+        
+        
        
 
         // Если _waiting_seq_id != 0
@@ -173,28 +185,3 @@ namespace Stock
     };
   }
 }
-
-/*
-void checre()
-{
-Reader reader("dd", "ff");
-int expected_seq_id = 1;
-do
-{
-auto order = reader.GetOrder();
-if (order == nullptr)
-{
-break;
-}
-
-if (expected_seq_id != order->_seq_id)
-{
-throw "BEDA";
-}
-
-++expected_seq_id;
-
-} while ()
-};
-*/
-
