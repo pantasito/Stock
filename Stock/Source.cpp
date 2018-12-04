@@ -96,6 +96,11 @@ int main() {
   checre();
   vector<Order> missed_orders = GetMissedOrders();
 
+  std::vector<char> v;
+  for (int i = 0; i < 100; i++) {
+    v.push_back(i);
+  }
+
   /*
   for (auto item : missed_orders) {
     item.print();
