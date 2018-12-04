@@ -23,30 +23,34 @@ using namespace Stock;
 
 class ReaderTester 
 {
-  std::unique_ptr<Reader::BinaryReader> _reader_tester;
+  std::unique_ptr<Reader::BinaryReader> _tested_reader;
 
 public:
-  ReaderTester(std::unique_ptr<Reader::BinaryReader> reader) : _reader_tester(std::move(reader))
+  ReaderTester(std::unique_ptr<Reader::BinaryReader> reader)
+    : _tested_reader(std::move(reader))
   {}
 
-  bool test() {
-    std::unique_ptr<Object::Order> tmp(std::move(_reader_tester->GetOrder()));
+  bool Test() {
+    auto cur_order = _tested_reader->GetOrder();
     
-    while (tmp != nullptr) {
-      std::unique_ptr<Object::Order> tmp(std::move(_reader_tester->GetOrder()));
+    while (cur_order != nullptr) {
+      cur_order = _tested_reader->GetOrder();
     }
     return true;
   }
 };
 
 
+#include <vector>
 
 int main() {
 
   // Тестирование ридера
    auto reader = std::make_unique<Reader::BinaryReader>("out.bin", "reserve.bin");
    ReaderTester reader_tester(std::move(reader));
-   bool success = reader_tester.test(); 
+   bool success = reader_tester.Test(); 
+   std::cout << "Result: " << success << std::endl;
+
 
   system("pause");
 }
