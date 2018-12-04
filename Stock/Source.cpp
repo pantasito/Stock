@@ -1,96 +1,47 @@
 #include <iostream>
-#include <stdlib.h>
 #include <fstream>
-#include <vector>
-using namespace std;
 
-const char* missed_orders_file_path = "D:\\C++ projects\\Andre\\SergeyStock\\Stock\\Debug\\reserve.bin";
-const char* orders_file_path = "D:\\C++ projects\\Andre\\SergeyStock\\Stock\\Debug\\out.bin";
+#include "Reader/Reader.h"
+#include "Object/Order.h"
+
+//using namespace std;
+
 /*
-enum class OrderType
-{
-  AllCompleted = 0,
-  PartCompleted = 1,
-  Rejected = 2
-};
+
+1) Реализовать функцию GetOrder;            //вроде +
+2) Выпилть                                  //вроде +
+  std::string _missed_orders_file_path;
+  std::string _orders_file_path;
+
+3) Реализовать отдельный класс, который будет тестировать правильность работы BinaryReader
+т.е. то, что функция GetOrder выдает ордера в порядке возрастания начиная с 1.
+В мейне я написал код, как я хочу чтобы это выглядело
+
 */
 
-// 
-class Order
+using namespace Stock;
+
+class ReaderTester 
 {
-  uint64_t  _seq_id; // SeqId()
-  uint64_t  _product_id;
-  uint64_t  _time;
-  char      _type;
-  uint32_t  _count;
-  uint64_t  _client_id;
+  std::unique_ptr<Reader::BinaryReader> _tested_reader;
 
 public:
-  Order(ifstream& ifs) {
-    ifs.read((char*)this, sizeof(Order));
-  }
-  
-  void print() {
-    cout <<_seq_id << " " << _product_id << " " << _time << " " << (int)_type << " " << _count << " " << _client_id << endl;
-  }
-};
+  ReaderTester(std::unique_ptr<Reader::BinaryReader> reader)
+    : _tested_reader(std::move(reader))
+  {}
 
-
-class Reader
-{
-
-public:
-  Reader(string a, string b) 
-  {
-    // Считать файл б
-    // Собрать из него вектор
-    // отсортировать
-
-    // ОТкрыть поток
-  }
-
-  Order* GetOrder() {} 
-};
-
-
-void checre()
-{
-  Reader reader("dd", "ff");
-  int expected_seq_id = 1;
-  do
-  {
-    auto order = reader.GetOrder();
-    if (order == nullptr)
-    {
-      break;
+  bool Test() {
+    auto cur_order = _tested_reader->GetOrder();
+    
+    while (cur_order != nullptr) {
+      cur_order = _tested_reader->GetOrder();
     }
-
-    if (expected_seq_id != order->_seq_id)
-    {
-      throw "BEDA";
-    }
-
-    ++expected_seq_id;
-
-  } while ()
+    return true;
+  }
 };
 
-vector<Order> GetMissedOrders() {
-  vector<Order> result_orders;
 
-  ifstream missed_orders_ifs(missed_orders_list, ios::binary);
-
-  while (missed_orders_ifs) {
-  //  Order n;
-   // orders.read((char*)&n, sizeof(n));
-    //Order n(orders);
-    //res.push_back(n);
-    result_orders.emplace_back(missed_orders_ifs); // Создает объект прямо внутри вектора, на вход она принимает аргументы конструктора
-  }
-
-  result_orders.close();
-  return result_orders;
-}                       
+#include <vector>
 
 int main() {  
   checre();
@@ -107,6 +58,11 @@ int main() {
   }
   */
 
+  // Тестирование ридера
+   auto reader = std::make_unique<Reader::BinaryReader>("out.bin", "reserve.bin");
+   ReaderTester reader_tester(std::move(reader));
+   bool success = reader_tester.Test(); 
+   std::cout << "Result: " << success << std::endl;
 
 
   system("pause");
