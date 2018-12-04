@@ -8,8 +8,8 @@
 
 /*
 
-1) Реализовать функцию GetOrder;
-2) Выпилть 
+1) Реализовать функцию GetOrder;            //вроде +
+2) Выпилть                                  //вроде +
   std::string _missed_orders_file_path;
   std::string _orders_file_path;
 
@@ -21,19 +21,32 @@
 
 using namespace Stock;
 
-int main() {  
-  
-//  checre();
-  Reader::BinaryReader r("reserve.bin","out.bin");
-  r.print();
+class ReaderTester 
+{
+  std::unique_ptr<Reader::BinaryReader> _reader_tester;
 
+public:
+  ReaderTester(std::unique_ptr<Reader::BinaryReader> reader) : _reader_tester(std::move(reader))
+  {}
+
+  bool test() {
+    std::unique_ptr<Object::Order> tmp(std::move(_reader_tester->GetOrder()));
+    
+    while (tmp != nullptr) {
+      std::unique_ptr<Object::Order> tmp(std::move(_reader_tester->GetOrder()));
+    }
+    return true;
+  }
+};
+
+
+
+int main() {
 
   // Тестирование ридера
-  // auto reader = std::make_unique<Reader::BinaryReader>("reserve.bin","out.bin");
-  // ReaderTester reader_tester(std::move(reader));
-  // bool success = reader_tester.test(); 
-
-
+   auto reader = std::make_unique<Reader::BinaryReader>("out.bin", "reserve.bin");
+   ReaderTester reader_tester(std::move(reader));
+   bool success = reader_tester.test(); 
 
   system("pause");
 }
