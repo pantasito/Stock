@@ -119,6 +119,8 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Object\Order.h" />
+    <ClInclude Include="OrdersPriorityGrouper\OrdersPriorityGrouper.h" />
+    <ClInclude Include="OrdersTimeGrouper\OrdersTimeGrouper.h" />
     <ClInclude Include="Reader\Reader.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
