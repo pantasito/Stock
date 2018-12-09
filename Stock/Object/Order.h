@@ -31,11 +31,9 @@ namespace Stock
         _client_id(client_id)
       {}
 
-      uint64_t get_time() {
-        return _time;
-      }
+      uint64_t Time() { return _time; }
 
-      void print() {
+      void Print() {
         std::cout << _product_id << " " << _time << " " << (int)_type << " " << _count << " " << _client_id << std::endl;
       }
     };

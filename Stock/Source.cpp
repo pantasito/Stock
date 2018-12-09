@@ -4,6 +4,8 @@
 #include "Reader/Reader.h"
 #include "Object/Order.h"
 
+#include "StockInfo\OrdersTimeGrouper.h"
+
 //using namespace std;
 
 /*
@@ -44,25 +46,49 @@ public:
 #include <vector>
 
 int main() {  
-  checre();
-  vector<Order> missed_orders = GetMissedOrders();
-
-  std::vector<char> v;
-  for (int i = 0; i < 100; i++) {
-    v.push_back(i);
-  }
-
-  /*
-  for (auto item : missed_orders) {
-    item.print();
-  }
-  */
 
   // Тестирование ридера
-   auto reader = std::make_unique<Reader::BinaryReader>("out.bin", "reserve.bin");
+ /*
+  auto reader = std::make_unique<Reader::BinaryReader>("out.bin", "reserve.bin");
    ReaderTester reader_tester(std::move(reader));
    bool success = reader_tester.Test(); 
    std::cout << "Result: " << success << std::endl;
+   */
+
+  auto reader  = std::make_unique<Reader::BinaryReader>("out.bin", "reserve.bin");
+  StockInfo::OrdersTimeGrouper grouper(std::move(reader));
+
+  auto group = grouper.GetGroup();
+  auto group_time = group.front()->Time();
+  
+  while (!group.empty()) {
+    for (auto& order : group) {
+      if (order->Time() != group_time) {
+        throw std::logic_error("G");
+      }
+    }
+
+    std::cout << group_time << std::endl;
+
+    group = grouper.GetGroup();
+
+    if (group.empty()) {
+      break;
+    }
+
+
+    if (group.front()->Time() <= group_time) {
+      throw std::logic_error("G");
+    }
+
+    group_time = group.front()->Time();
+  }
+
+  for (int i = 0; i < 100; i++) {
+    if (!grouper.GetGroup().empty()) {
+      throw std::logic_error("G");
+    }
+  }
 
 
   system("pause");
