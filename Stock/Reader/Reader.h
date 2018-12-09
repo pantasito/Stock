@@ -172,8 +172,7 @@ namespace Stock
         if (seq_id == _expected_seq_id) {
           return std::move(ToGiveOrder(order));
         }
-
-        if (seq_id > _expected_seq_id) {
+        else { // (seq_id > _expected_seq_id)          
           _waiting_seq_id = seq_id;
           _waiting_order = std::move(order);
 
