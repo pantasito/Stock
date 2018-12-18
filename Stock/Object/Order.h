@@ -31,17 +31,15 @@ namespace Stock
         _client_id(client_id)
       {}
 
-      uint64_t  ProductId() { return _product_id; }
-
-      uint64_t Time() { return _time; }
-
-      OrderType Type() { return _type; }
-
-      uint32_t Count() { return _count; }
+      uint64_t  ProductId() const { return _product_id; }
+      uint64_t  Time()      const { return _time; }
+      OrderType Type()      const { return _type; }
+      uint32_t  Count()     const { return _count; }
 
       void Print() {
         std::cout << _product_id << " " << _time << " " << (int)_type << " " << _count << " " << _client_id << std::endl;
       }
     };
+
   }
 }

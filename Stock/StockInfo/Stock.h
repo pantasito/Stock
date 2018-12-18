@@ -2,46 +2,59 @@
 
 #include <map>
 
-#include "../StockInfo/OrdersTimeGrouper.h"
+#include <algorithm>
+
+
+#include "../Object/Order.h"
+#include "OrdersTimeGrouper.h"
 
 namespace Stock
 {
-  class Stock {
-    std::map <uint64_t, uint32_t> _stock;
-    std::unique_ptr <StockInfo::OrdersTimeGrouper> _grouper;
-    std::vector<std::unique_ptr<Object::Order>> _orders_group;
+  namespace StockInfo
+  {
+    class Stock {
+      static const int kClientsActivityTimeDelta = 10;
 
-  public:
-    Stock(std::unique_ptr <StockInfo::OrdersTimeGrouper> grouper)
-      : _grouper(move(grouper))
-    {}
 
-    uint32_t GetProductAmount(uint64_t product_id)
-    {
-      return _stock[product_id];
-    }
-      
-    // Просит новую группу и анализирует ее. Возвращает false если группы кончились
-    bool AnalyzeNewGroup() {
-      _orders_group = _grouper->GetGroup();
+      std::map<uint64_t, uint32_t> _products_counts; // Ключем является product_id, значением кол-во товара
 
-      if (_orders_group.empty()) {
-        return false;
+      std::unique_ptr <StockInfo::OrdersTimeGrouper> _grouper;
+
+    public:
+      Stock(std::unique_ptr <StockInfo::OrdersTimeGrouper> grouper)
+        : _grouper(move(grouper))
+      {}
+
+      uint32_t GetProductAmount(uint64_t product_id) {
+        const auto product_it = _products_counts.find(product_id);
+        return (product_it == _products_counts.end() ? 0 : product_it->second);
       }
-        
-      for (int i = 0; i < _orders_group.size(); ++i) {
-        if (_orders_group[i]->Type() == Stock::Object::OrderType::Crete){
-          _stock[_orders_group[i]->ProductId()] = _orders_group[i]->Count();
+
+      // Просит новую группу и анализирует ее. Возвращает false если группы кончились
+      bool AnalyzeNewGroup() {
+        const auto orders_group = _grouper->GetGroup();
+
+        if (orders_group.empty()) {
+          return false;
+        }   
+
+        for (const auto& order : orders_group) {
+          if (order->Type() == Object::OrderType::Create) {
+            const auto succes_emplace = _products_counts.emplace(order->ProductId(), order->Count()).second;
+            if (!succes_emplace) {
+              throw std::logic_error("Product already exist");
+            }
+          }
         }
-      }
 
-      for (int i = 0; i < _orders_group.size(); ++i) {
-        if (_orders_group[i]->Type() == Stock::Object::OrderType::Remove) {
-          _stock[_orders_group[i]->ProductId()] = 0;
+        for (const auto& order : orders_group) {
+          if (order->Type() == Object::OrderType::Remove) {
+            _products_counts.erase(order->ProductId());
+          }
         }
-      }
 
-      return true;
-    }
-  };
+        return true;
+      }
+    };
+  }
 }
