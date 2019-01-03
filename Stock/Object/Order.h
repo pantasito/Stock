@@ -35,6 +35,8 @@ namespace Stock
       uint64_t  Time()      const { return _time; }
       OrderType Type()      const { return _type; }
       uint32_t  Count()     const { return _count; }
+      uint64_t  ClientId()  const { return _client_id; }
+
 
       void Print() {
         std::cout << _product_id << " " << _time << " " << (int)_type << " " << _count << " " << _client_id << std::endl;

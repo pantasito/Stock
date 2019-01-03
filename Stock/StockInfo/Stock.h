@@ -1,11 +1,13 @@
 #pragma once
 
 #include <map>
+#include <vector>
 
 #include <algorithm>
 
 
 #include "../Object/Order.h"
+#include "../Object/Trade.h"
 #include "OrdersTimeGrouper.h"
 
 namespace Stock
@@ -19,6 +21,8 @@ namespace Stock
       std::map<uint64_t, uint32_t> _products_counts; // Ключем является product_id, значением кол-во товара
 
       std::unique_ptr <StockInfo::OrdersTimeGrouper> _grouper;
+
+      std::vector <Object::Trade> _trade;
 
     public:
       Stock(std::unique_ptr <StockInfo::OrdersTimeGrouper> grouper)
@@ -50,6 +54,27 @@ namespace Stock
         for (const auto& order : orders_group) {
           if (order->Type() == Object::OrderType::Remove) {
             _products_counts.erase(order->ProductId());
+          }
+        }
+
+        for (const auto& order : orders_group) {
+          if (order->Type() == Object::OrderType::Buy) {
+            auto product_id = order->ProductId();
+            auto count      = order->Count();
+            auto client_id  = order->ClientId();
+      
+            if (GetProductAmount(product_id) == 0) {
+              _trade.emplace_back(product_id, count, client_id, Object::TradeType::Reject);
+            }
+            if (GetProductAmount(product_id) < count) {
+              _trade.emplace_back(product_id, count, client_id, Object::TradeType::PartFill);
+              _products_counts[product_id] = 0;
+            }
+            if (GetProductAmount(product_id) >= count) {
+              _trade.emplace_back(product_id, count, client_id, Object::TradeType::FullFill);
+              _products_counts[product_id] -= count;
+              //_products_counts[product_id] = GetProductAmount(product_id) - count;
+            }
           }
         }
 

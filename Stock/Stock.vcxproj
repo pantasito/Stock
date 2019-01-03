@@ -119,6 +119,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Object\Order.h" />
+    <ClInclude Include="Object\Trade.h" />
     <ClInclude Include="OrdersPriorityGrouper\OrdersPriorityGrouper.h" />
     <ClInclude Include="StockInfo\OrdersTimeGrouper.h" />
     <ClInclude Include="Reader\Reader.h" />
