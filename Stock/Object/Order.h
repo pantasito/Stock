@@ -13,11 +13,11 @@ namespace Stock
     };
 
     class Order {
-      uint64_t  _product_id;
-      uint64_t  _time;
-      OrderType _type;
-      uint32_t  _count;
-      uint64_t  _client_id;
+      const uint64_t  _product_id;
+      const uint64_t  _time;
+      const OrderType _type;
+      const uint32_t  _count;
+      const uint64_t  _client_id;
 
       Order(const Order&) = delete;
       void operator=(const Order&) = delete;
@@ -42,6 +42,5 @@ namespace Stock
         std::cout << _product_id << " " << _time << " " << (int)_type << " " << _count << " " << _client_id << std::endl;
       }
     };
-
   }
 }

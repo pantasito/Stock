@@ -13,10 +13,10 @@ namespace Stock
     };
 
     class Trade {
-      uint64_t  _product_id;
-      uint32_t  _count;
-      uint64_t  _client_id;
-      TradeType _type;
+      const uint64_t  _product_id;
+      const uint32_t  _count;
+      const uint64_t  _client_id;
+      const TradeType _type;
 
       Trade(const Trade&) = delete;
       void operator=(const Trade&) = delete;

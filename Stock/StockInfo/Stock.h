@@ -22,7 +22,30 @@ namespace Stock
 
       std::unique_ptr <StockInfo::OrdersTimeGrouper> _grouper;
 
-      std::vector <Object::Trade> _trade;
+      std::vector<std::unique_ptr<Object::Trade>> _trades;
+
+      void AnalyzeBuyOrder(const std::unique_ptr <Object::Order> &order ) {
+        const auto product_id = order->ProductId();
+        const auto count = order->Count();
+        const auto client_id = order->ClientId();
+
+        auto it = _products_counts.find(product_id);
+        Object::TradeType type;
+
+        if (it == _products_counts.end()) {
+          type = Object::TradeType::Reject;
+        }
+        else if (it->second < count) {
+          type = Object::TradeType::PartFill;
+          _products_counts.erase(it);
+        }
+        else {
+          type = Object::TradeType::FullFill;
+          it->second -= count;
+        }
+
+        _trades.emplace_back(std::make_unique<Object::Trade>(product_id, count, client_id, type));
+      }
 
     public:
       Stock(std::unique_ptr <StockInfo::OrdersTimeGrouper> grouper)
@@ -59,22 +82,7 @@ namespace Stock
 
         for (const auto& order : orders_group) {
           if (order->Type() == Object::OrderType::Buy) {
-            auto product_id = order->ProductId();
-            auto count      = order->Count();
-            auto client_id  = order->ClientId();
-      
-            if (GetProductAmount(product_id) == 0) {
-              _trade.emplace_back(product_id, count, client_id, Object::TradeType::Reject);
-            }
-            if (GetProductAmount(product_id) < count) {
-              _trade.emplace_back(product_id, count, client_id, Object::TradeType::PartFill);
-              _products_counts[product_id] = 0;
-            }
-            if (GetProductAmount(product_id) >= count) {
-              _trade.emplace_back(product_id, count, client_id, Object::TradeType::FullFill);
-              _products_counts[product_id] -= count;
-              //_products_counts[product_id] = GetProductAmount(product_id) - count;
-            }
+            AnalyzeBuyOrder(order);
           }
         }
 
