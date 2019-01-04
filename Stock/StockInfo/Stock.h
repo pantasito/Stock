@@ -24,7 +24,7 @@ namespace Stock
 
       std::vector<std::unique_ptr<Object::Trade>> _trades;
 
-      void AnalyzeBuyOrder(const std::unique_ptr <Object::Order> &order ) {
+      void AnalyzeBuyOrder(const std::unique_ptr<Object::Order>& order ) {
         const auto product_id = order->ProductId();
         const auto count = order->Count();
         const auto client_id = order->ClientId();
@@ -42,6 +42,9 @@ namespace Stock
         else {
           type = Object::TradeType::FullFill;
           it->second -= count;
+          if (it->second == 0) {
+            _products_counts.erase(it);
+          }
         }
 
         _trades.emplace_back(std::make_unique<Object::Trade>(product_id, count, client_id, type));
