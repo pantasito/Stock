@@ -5,7 +5,6 @@
 
 #include <algorithm>
 
-
 #include "../Object/Order.h"
 #include "../Object/Trade.h"
 #include "OrdersTimeGrouper.h"
@@ -50,6 +49,45 @@ namespace Stock
         _trades.emplace_back(std::make_unique<Object::Trade>(product_id, count, client_id, type));
       }
 
+      struct ParametersOfDeal
+      {
+        int _time_of_transaction;
+        int _count;
+      };
+
+      class ClientsActivity {
+        std::vector<ParametersOfDeal> _clients_activity[10000];
+      public:
+        ClientsActivity(){}
+
+        void PushTradedOrder(uint64_t time, uint32_t count, uint64_t client_id) {
+          _clients_activity[client_id].emplace_back(time, count);
+        }
+
+        int GetCount(uint64_t time, uint64_t client_id){ //складываю разные типа uint64_t и int
+          int result = 0;
+          if (_clients_activity[client_id].empty()) {
+            return result;
+          }
+          
+          for (std::vector<ParametersOfDeal>::reverse_iterator it = _clients_activity[client_id].rbegin();
+                it != _clients_activity[client_id].rend(); ++it) {
+            if (time - it->_time_of_transaction <= 10) {
+              result += it->_count;
+            }
+            else break;
+          }
+          
+          return result;
+        }
+      };
+
+      void BuyersRanking(std::vector<std::unique_ptr<Object::Order>>& orders_group) {
+        std::stable_sort(orders_group.begin(), orders_group.end(), 
+                        [this](const auto& a, const auto& b) { 
+          return _clients_activity.get_count(a.client_id, a.time) < _clients_activity.get_count(b.client_id, b.time)});
+      }
+
     public:
       Stock(std::unique_ptr <StockInfo::OrdersTimeGrouper> grouper)
         : _grouper(move(grouper))
@@ -83,10 +121,17 @@ namespace Stock
           }
         }
 
+        std::vector<std::unique_ptr<Object::Order>> group_buy;
         for (const auto& order : orders_group) {
           if (order->Type() == Object::OrderType::Buy) {
-            AnalyzeBuyOrder(order);
+            group_buy.push_back(order);
           }
+        }
+
+        BuyersRanking(group_buy);
+
+        for (const auto& order : group_buy) {
+          AnalyzeBuyOrder(order);
         }
 
         return true;
