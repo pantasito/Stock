@@ -13,6 +13,8 @@ namespace Stock
     {
       int _time;
       int _count;
+
+      TimeCountOfTrade(int time, int count):_time(time),_count(count) {}
     };
 
     class ClientsActivity {
@@ -20,7 +22,7 @@ namespace Stock
 
     public:
       void AddTradedOrder(uint64_t client_id, uint64_t time, uint32_t count) {
-        _clients_trades[client_id].emplace_back(time, count);
+        _clients_trades[client_id].emplace_back(TimeCountOfTrade(time, count));
       }
 
       int GetCount(uint64_t client_id, uint64_t time) { //складываю разные типа uint64_t и int

@@ -4,7 +4,8 @@
 #include "Reader/Reader.h"
 #include "Object/Order.h"
 
-#include "StockInfo\OrdersTimeGrouper.h"
+#include "StockInfo/OrdersTimeGrouper.h"
+#include "StockInfo/Stock.h"
 
 //using namespace std;
 
@@ -55,9 +56,20 @@ int main() {
    std::cout << "Result: " << success << std::endl;
    */
 
-  auto reader  = std::make_unique<Reader::BinaryReader>("out.bin", "reserve.bin");
-  StockInfo::OrdersTimeGrouper grouper(std::move(reader));
+  auto reader = std::make_unique<Reader::BinaryReader>("out.bin", "reserve.bin");
+  auto grouper = std::make_unique<StockInfo::OrdersTimeGrouper>(std::move(reader));
+  StockInfo::Stock stock(std::move(grouper));
+  
+  while (stock.AnalyzeNewGroup()) {
 
+  }
+
+  for (const auto& trade : stock.Trades()) {
+    trade->Print();
+  }
+
+
+  /*
   auto group = grouper.GetGroup();
   auto group_time = group.front()->Time();
   
@@ -89,7 +101,7 @@ int main() {
       throw std::logic_error("G");
     }
   }
-
+  */
 
   system("pause");
 }

@@ -35,7 +35,7 @@ namespace Stock
       TradeType Type()      const { return _type; }
 
       void Print() {
-        std::cout << _product_id << " " << _count << " " << _client_id << " " << (int)_type << std::endl;
+        std::cout << _product_id << "\t" << _count << "\t" << _client_id << "\t" << (int)_type << std::endl;
       }
     };
   }

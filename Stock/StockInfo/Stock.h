@@ -21,10 +21,12 @@ namespace Stock
 
       std::vector<std::unique_ptr<Object::Trade>> _trades;
 
-      void AnalyzeBuyOrder(std::vector<std::unique_ptr<Object::Order>>::iterator& order) {
-        const auto product_id = (*order)->ProductId();
-        const auto count = (*order)->Count();
-        const auto client_id = (*order)->ClientId();
+      ClientsActivity _clients_activity;
+
+      void AnalyzeBuyOrder(const std::unique_ptr<Object::Order>& order) {
+        const auto product_id = order->ProductId();
+        const auto count = order->Count();
+        const auto client_id = order->ClientId();
 
         auto it = _products_counts.find(product_id);
         Object::TradeType type;
@@ -43,7 +45,8 @@ namespace Stock
             _products_counts.erase(it);
           }
         }
-        //нужно делать add сделки в массив
+        
+        _clients_activity.AddTradedOrder(client_id, order->Time(), count);
         _trades.emplace_back(std::make_unique<Object::Trade>(product_id, count, client_id, type));
       }
 
@@ -52,50 +55,60 @@ namespace Stock
         : _grouper(move(grouper))
       {}
 
-      uint32_t GetProductAmount(uint64_t product_id) {
+      //¬озвращает количество товара, 0, если запрашиваемого id нет
+      uint32_t GetProductAmount(uint64_t product_id) const {
         const auto product_it = _products_counts.find(product_id);
         return (product_it == _products_counts.end() ? 0 : product_it->second);
       }
 
-      // ѕросит новую группу и анализирует ее. ¬озвращает false если группы кончились
+      //ѕросит новую группу и анализирует ее. ¬озвращает false если группы кончились
       bool AnalyzeNewGroup() {
-        const auto orders_group = _grouper->GetGroup();
+        auto orders_group = _grouper->GetGroup();
 
         if (orders_group.empty()) {
           return false;
         }   
        
         //в конце вектора лежат упор€доченные по возрастанию заказы типа Buy
-        auto it_to_buyes = std::stable_partion(orders_group.begin(), orders_group.end(), [](const auto& order) { return order->Type() != Object::OrderType::Buy; });
-
+        const auto it_to_buyes = std::stable_partition(orders_group.begin(), orders_group.end(), [](auto& order) { return order->Type() != Object::OrderType::Buy; });
+        
         std::stable_sort(it_to_buyes, orders_group.end(),
-        [this](const auto& a, const auto& b) {
-        return _clients_activity.get_count(a.client_id, a.time) < _clients_activity.get_count(b.client_id, b.time)});
-
+        [this](const auto& a,const auto& b) {
+          return _clients_activity.GetCount(a->ClientId(), a->Time()) < _clients_activity.GetCount(b->ClientId(), b->Time());
+        });
+        
         //в начале лежат заказы типа Create
-        auto it_to_delete = std::stable_partion(orders_group.begin(), it_to_buyes, [](const auto& order) { return order->Type() == Object::OrderType::Create; });
+        const auto it_to_delete = std::stable_partition(orders_group.begin(), it_to_buyes, [](const auto& order) { return order->Type() == Object::OrderType::Create; });
        
         //прохожу по заказам создать - создаю
-        for (auto it_to_create = orders_group.begin(); it_to_create != it_to_delete; ++it_to_create) {
-          const auto succes_emplace = _products_counts.emplace((*it_to_create)->ProductId(), (*it_to_create)->Count()).second;
-          if (!succes_emplace) {
+        for (auto it = orders_group.begin(); it != it_to_delete; ++it) {
+          const auto success_emplace = _products_counts.emplace((*it)->ProductId(), (*it)->Count()).second;
+          if (!success_emplace) {
             throw std::logic_error("Product already exist");
           }
         }
 
         //прохожу по заказам удалить - удал€ю
-        for (it_to_delete; it_to_delete != it_to_buyes; ++it_to_delete) {
-          _products_counts.erase((*it_to_delete)->ProductId());
+        for (auto it = it_to_delete; it != it_to_buyes; ++it) {
+          _products_counts.erase((*it)->ProductId());
         }
 
         //прохожу по заказам bye - обрабатываю
-        for (it_to_buyes; it_to_buyes != orders_group.end(); ++it_to_delete) {
-          if ((*it_to_buyes)->ClientId() > kMaxNumberOfClients) throw std::logic_error("Number of client is out of range");
-          AnalyzeBuyOrder(it_to_buyes);
+        for (auto it = it_to_buyes; it != orders_group.end(); ++it) {
+          if ((*it)->ClientId() > kMaxNumberOfClients) {
+            throw std::logic_error("Number of client is out of range");
+          }
+
+          AnalyzeBuyOrder(*it);
         }
 
         return true;
       }
+
+      const auto& Trades() const {
+        return _trades;
+      }
+
     };
   }
 }
