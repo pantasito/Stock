@@ -8,25 +8,23 @@
 #include "../Object/Order.h"
 #include "../Object/Trade.h"
 #include "OrdersTimeGrouper.h"
+#include "ClientActivity.h"
 
 namespace Stock
 {
   namespace StockInfo
   {
     class Stock {
-      static const int kClientsActivityTimeDelta = 10;
-
-
       std::map<uint64_t, uint32_t> _products_counts; // Ключем является product_id, значением кол-во товара
 
       std::unique_ptr <StockInfo::OrdersTimeGrouper> _grouper;
 
       std::vector<std::unique_ptr<Object::Trade>> _trades;
 
-      void AnalyzeBuyOrder(const std::unique_ptr<Object::Order>& order ) {
-        const auto product_id = order->ProductId();
-        const auto count = order->Count();
-        const auto client_id = order->ClientId();
+      void AnalyzeBuyOrder(std::vector<std::unique_ptr<Object::Order>>::iterator& order) {
+        const auto product_id = (*order)->ProductId();
+        const auto count = (*order)->Count();
+        const auto client_id = (*order)->ClientId();
 
         auto it = _products_counts.find(product_id);
         Object::TradeType type;
@@ -45,47 +43,8 @@ namespace Stock
             _products_counts.erase(it);
           }
         }
-
+        //нужно делать add сделки в массив
         _trades.emplace_back(std::make_unique<Object::Trade>(product_id, count, client_id, type));
-      }
-
-      struct ParametersOfDeal
-      {
-        int _time_of_transaction;
-        int _count;
-      };
-
-      class ClientsActivity {
-        std::vector<ParametersOfDeal> _clients_activity[10000];
-      public:
-        ClientsActivity(){}
-
-        void PushTradedOrder(uint64_t time, uint32_t count, uint64_t client_id) {
-          _clients_activity[client_id].emplace_back(time, count);
-        }
-
-        int GetCount(uint64_t time, uint64_t client_id){ //складываю разные типа uint64_t и int
-          int result = 0;
-          if (_clients_activity[client_id].empty()) {
-            return result;
-          }
-          
-          for (std::vector<ParametersOfDeal>::reverse_iterator it = _clients_activity[client_id].rbegin();
-                it != _clients_activity[client_id].rend(); ++it) {
-            if (time - it->_time_of_transaction <= 10) {
-              result += it->_count;
-            }
-            else break;
-          }
-          
-          return result;
-        }
-      };
-
-      void BuyersRanking(std::vector<std::unique_ptr<Object::Order>>& orders_group) {
-        std::stable_sort(orders_group.begin(), orders_group.end(), 
-                        [this](const auto& a, const auto& b) { 
-          return _clients_activity.get_count(a.client_id, a.time) < _clients_activity.get_count(b.client_id, b.time)});
       }
 
     public:
@@ -105,33 +64,34 @@ namespace Stock
         if (orders_group.empty()) {
           return false;
         }   
+       
+        //в конце вектора лежат упорядоченные по возрастанию заказы типа Buy
+        auto it_to_buyes = std::stable_partion(orders_group.begin(), orders_group.end(), [](const auto& order) { return order->Type() != Object::OrderType::Buy; });
 
-        for (const auto& order : orders_group) {
-          if (order->Type() == Object::OrderType::Create) {
-            const auto succes_emplace = _products_counts.emplace(order->ProductId(), order->Count()).second;
-            if (!succes_emplace) {
-              throw std::logic_error("Product already exist");
-            }
+        std::stable_sort(it_to_buyes, orders_group.end(),
+        [this](const auto& a, const auto& b) {
+        return _clients_activity.get_count(a.client_id, a.time) < _clients_activity.get_count(b.client_id, b.time)});
+
+        //в начале лежат заказы типа Create
+        auto it_to_delete = std::stable_partion(orders_group.begin(), it_to_buyes, [](const auto& order) { return order->Type() == Object::OrderType::Create; });
+       
+        //прохожу по заказам создать - создаю
+        for (auto it_to_create = orders_group.begin(); it_to_create != it_to_delete; ++it_to_create) {
+          const auto succes_emplace = _products_counts.emplace((*it_to_create)->ProductId(), (*it_to_create)->Count()).second;
+          if (!succes_emplace) {
+            throw std::logic_error("Product already exist");
           }
         }
 
-        for (const auto& order : orders_group) {
-          if (order->Type() == Object::OrderType::Remove) {
-            _products_counts.erase(order->ProductId());
-          }
+        //прохожу по заказам удалить - удаляю
+        for (it_to_delete; it_to_delete != it_to_buyes; ++it_to_delete) {
+          _products_counts.erase((*it_to_delete)->ProductId());
         }
 
-        std::vector<std::unique_ptr<Object::Order>> group_buy;
-        for (const auto& order : orders_group) {
-          if (order->Type() == Object::OrderType::Buy) {
-            group_buy.push_back(order);
-          }
-        }
-
-        BuyersRanking(group_buy);
-
-        for (const auto& order : group_buy) {
-          AnalyzeBuyOrder(order);
+        //прохожу по заказам bye - обрабатываю
+        for (it_to_buyes; it_to_buyes != orders_group.end(); ++it_to_delete) {
+          if ((*it_to_buyes)->ClientId() > kMaxNumberOfClients) throw std::logic_error("Number of client is out of range");
+          AnalyzeBuyOrder(it_to_buyes);
         }
 
         return true;
